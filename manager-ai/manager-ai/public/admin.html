@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پنل افزودن محتوا</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12161d; --surface:#1b212b; --line:#2c3644;
+    --gold:#c9a227; --text:#ede9e0; --text-dim:#8b93a1; --text-faint:#545e6c;
+    --danger:#b5556b;
+  }
+  *{box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Vazirmatn',sans-serif;margin:0;padding:32px 20px;}
+  .wrap{max-width:640px;margin:0 auto;}
+  h1{font-size:18px;display:flex;align-items:center;gap:8px;}
+  .back{color:var(--text-faint);font-size:12px;text-decoration:none;display:inline-block;margin-bottom:18px;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px;}
+  label{display:block;font-size:12.5px;color:var(--text-dim);margin-bottom:6px;margin-top:14px;}
+  input, textarea{
+    width:100%;background:#161b23;border:1px solid var(--line);border-radius:8px;
+    color:var(--text);font-family:'Vazirmatn',sans-serif;font-size:14px;padding:10px 12px;outline:none;
+  }
+  textarea{min-height:120px;resize:vertical;line-height:1.8;}
+  input:focus, textarea:focus{border-color:var(--gold);}
+  button{
+    background:var(--gold);color:#1a1508;border:none;padding:11px 22px;border-radius:8px;
+    font-family:'Vazirmatn',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;margin-top:16px;
+  }
+  .msg{font-size:12.5px;margin-top:10px;}
+  .msg.ok{color:#7fae8a;}
+  .msg.err{color:var(--danger);}
+  .lib-item{border-bottom:1px solid var(--line);padding:12px 0;}
+  .lib-item:last-child{border-bottom:none;}
+  .lib-title{font-weight:700;font-size:14px;}
+  .lib-cat{font-size:11px;color:var(--text-faint);margin-inline-start:8px;}
+  .lib-content{font-size:12.5px;color:var(--text-dim);margin-top:4px;line-height:1.8;}
+  .del-btn{background:transparent;color:var(--danger);border:1px solid var(--danger);padding:4px 10px;font-size:11px;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← بازگشت به چت</a>
+  <h1>📥 پنل افزودن محتوای روزانه</h1>
+
+  <div class="card">
+    <h1 style="font-size:14px;margin-top:0;">📄 آپلود مستقیم فایل ورد (روش پیشنهادی)</h1>
+    <label>رمز عبور مدیریت</label>
+    <input type="password" id="docxPassword" placeholder="رمزی که در تنظیمات هاست گذاشته‌اید">
+
+    <label>دسته‌بندی برای کل این فایل (اختیاری)</label>
+    <input type="text" id="docxCategory" placeholder="مثلاً: به‌روزرسانی امروز">
+
+    <label>فایل ورد (.docx)</label>
+    <input type="file" id="docxFile" accept=".docx">
+
+    <button onclick="uploadDocx()">آپلود و افزودن خودکار</button>
+    <div class="msg" id="docxMsg"></div>
+    <div style="font-size:11.5px;color:var(--text-faint);margin-top:10px;line-height:1.8;">
+      فایل به‌طور خودکار به چند بخش تقسیم می‌شود تا جست‌وجو در آن دقیق‌تر باشد. فقط فایل با پسوند .docx پشتیبانی می‌شود (نه PDF).
+    </div>
+  </div>
+
+  <div class="card">
+    <h1 style="font-size:14px;margin-top:0;">✍️ افزودن دستی (یک مطلب در هر بار)</h1>
+    <label>رمز عبور مدیریت</label>
+    <input type="password" id="password" placeholder="رمزی که در تنظیمات هاست گذاشته‌اید">
+
+    <label>عنوان محتوا</label>
+    <input type="text" id="title" placeholder="مثلاً: مدیریت تیم در شرایط تورمی">
+
+    <label>دسته‌بندی (اختیاری)</label>
+    <input type="text" id="category" placeholder="مثلاً: رهبری و تیم">
+
+    <label>متن کامل / خلاصه تحلیلی</label>
+    <textarea id="content" placeholder="متن مقاله یا خلاصه‌ای که می‌خواهید در کتابخانه ذخیره شود…"></textarea>
+
+    <label>کلیدواژه‌ها (با کاما جدا کنید — اختیاری، اما جست‌وجو را دقیق‌تر می‌کند)</label>
+    <input type="text" id="keywords" placeholder="مثلاً: تورم, انگیزه, تیم">
+
+    <button onclick="addContent()">افزودن به کتابخانه</button>
+    <div class="msg" id="addMsg"></div>
+  </div>
+
+  <div class="card">
+    <h1 style="font-size:14px;">📚 محتوای فعلی کتابخانه</h1>
+    <div id="libList">در حال بارگذاری…</div>
+  </div>
+</div>
+
+<script>
+async function loadLibrary(){
+  const res = await fetch('/api/library');
+  const items = await res.json();
+  const el = document.getElementById('libList');
+  if(items.length === 0){ el.innerHTML = '<div style="color:var(--text-faint);font-size:13px;">هنوز محتوایی اضافه نشده.</div>'; return; }
+  el.innerHTML = items.slice().reverse().map(item => `
+    <div class="lib-item">
+      <div class="lib-title">${escapeHtml(item.title)}<span class="lib-cat">${escapeHtml(item.category||'')}</span></div>
+      <div class="lib-content">${escapeHtml((item.content||'').slice(0,140))}${item.content && item.content.length>140 ? '…' : ''}</div>
+      <button class="del-btn" onclick="deleteContent(${item.id})">حذف</button>
+    </div>
+  `).join('');
+}
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+async function uploadDocx(){
+  const password = document.getElementById('docxPassword').value;
+  const category = document.getElementById('docxCategory').value.trim();
+  const fileInput = document.getElementById('docxFile');
+  const msgEl = document.getElementById('docxMsg');
+
+  if(!fileInput.files.length){ msgEl.textContent = 'یک فایل انتخاب کنید.'; msgEl.className='msg err'; return; }
+
+  const formData = new FormData();
+  formData.append('password', password);
+  formData.append('category', category);
+  formData.append('file', fileInput.files[0]);
+
+  msgEl.textContent = 'در حال پردازش فایل…'; msgEl.className='msg';
+
+  try{
+    const res = await fetch('/api/library/add-docx', { method:'POST', body: formData });
+    const data = await res.json();
+    if(!res.ok){ msgEl.textContent = data.error; msgEl.className='msg err'; return; }
+    msgEl.textContent = `اضافه شد ✓ (${data.added} بخش جدید، مجموع کل: ${data.count})`;
+    msgEl.className = 'msg ok';
+    fileInput.value = '';
+    loadLibrary();
+  } catch(err){
+    msgEl.textContent = 'خطا: ' + err.message; msgEl.className='msg err';
+  }
+}
+
+async function addContent(){
+  const password = document.getElementById('password').value;
+  const title = document.getElementById('title').value.trim();
+  const category = document.getElementById('category').value.trim();
+  const content = document.getElementById('content').value.trim();
+  const keywords = document.getElementById('keywords').value.trim();
+  const msgEl = document.getElementById('addMsg');
+
+  if(!title || !content){ msgEl.textContent = 'عنوان و متن الزامی است.'; msgEl.className='msg err'; return; }
+
+  try{
+    const res = await fetch('/api/library/add', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password, title, category, content, keywords })
+    });
+    const data = await res.json();
+    if(!res.ok){ msgEl.textContent = data.error; msgEl.className='msg err'; return; }
+    msgEl.textContent = 'اضافه شد ✓ (تعداد کل: ' + data.count + ')';
+    msgEl.className = 'msg ok';
+    document.getElementById('title').value='';
+    document.getElementById('category').value='';
+    document.getElementById('content').value='';
+    document.getElementById('keywords').value='';
+    loadLibrary();
+  } catch(err){
+    msgEl.textContent = 'خطا: ' + err.message; msgEl.className='msg err';
+  }
+}
+
+async function deleteContent(id){
+  const password = document.getElementById('password').value;
+  if(!password){ alert('اول رمز عبور را وارد کنید.'); return; }
+  const res = await fetch('/api/library/delete', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password, id })
+  });
+  const data = await res.json();
+  if(!res.ok){ alert(data.error); return; }
+  loadLibrary();
+}
+
+loadLibrary();
+</script>
+</body>
+</html>
