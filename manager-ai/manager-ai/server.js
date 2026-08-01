@@ -87,7 +87,10 @@ ${contextBlock || 'در حال حاضر کتابخانه خالی است — ب�
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: message }] }],
-        generationConfig: { maxOutputTokens: 1000 },
+        generationConfig: {
+          maxOutputTokens: 2048,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       }),
     });
 
