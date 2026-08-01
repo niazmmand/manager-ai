@@ -125,14 +125,21 @@ async function uploadDocx(){
 
   try{
     const res = await fetch('/api/library/add-docx', { method:'POST', body: formData });
-    const data = await res.json();
-    if(!res.ok){ msgEl.textContent = data.error; msgEl.className='msg err'; return; }
+    let data;
+    try{
+      data = await res.json();
+    } catch(parseErr){
+      msgEl.textContent = 'پاسخ سرور نامعتبر بود (کد ' + res.status + '). ممکن است فایل خیلی بزرگ باشد یا سرور موقتاً در دسترس نبوده — کمی صبر کن و دوباره امتحان کن.';
+      msgEl.className = 'msg err';
+      return;
+    }
+    if(!res.ok){ msgEl.textContent = data.error || ('خطای سرور (کد ' + res.status + ')'); msgEl.className='msg err'; return; }
     msgEl.textContent = `اضافه شد ✓ (${data.added} بخش جدید، مجموع کل: ${data.count})`;
     msgEl.className = 'msg ok';
     fileInput.value = '';
     loadLibrary();
   } catch(err){
-    msgEl.textContent = 'خطا: ' + err.message; msgEl.className='msg err';
+    msgEl.textContent = 'خطا در اتصال: ' + err.message; msgEl.className='msg err';
   }
 }
 
