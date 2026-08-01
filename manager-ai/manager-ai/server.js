@@ -165,10 +165,21 @@ app.post('/api/library/add-docx', upload.single('file'), async (req, res) => {
     const fullText = result.value || '';
 
     // تقسیم متن به پاراگراف‌های معنادار (پاراگراف‌های خیلی کوتاه نادیده گرفته می‌شوند)
-    const paragraphs = fullText
-      .split(/\n+/)
-      .map(p => p.trim())
-      .filter(p => p.length > 60);
+    // و ترکیب خطوط کوتاه پشت‌سرهم تا تعداد بخش‌ها زیاد و سنگین نشود
+    const rawLines = fullText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+    const merged = [];
+    let buffer = '';
+    for (const line of rawLines) {
+      buffer = buffer ? buffer + ' ' + line : line;
+      if (buffer.length > 250) {
+        merged.push(buffer);
+        buffer = '';
+      }
+    }
+    if (buffer.length > 60) merged.push(buffer);
+
+    const MAX_ENTRIES = 250;
+    const paragraphs = merged.slice(0, MAX_ENTRIES);
 
     if (paragraphs.length === 0) {
       return res.status(400).json({ error: 'متنی در فایل پیدا نشد یا خیلی کوتاه بود.' });
@@ -194,6 +205,15 @@ app.post('/api/library/add-docx', upload.single('file'), async (req, res) => {
     console.error('خطا در /api/library/add-docx:', err);
     res.status(500).json({ error: 'خطا در پردازش فایل ورد: ' + (err.message || 'نامشخص') });
   }
+});
+
+// ---------- گیرنده‌ی خطای سراسری ----------
+// اگر هر جای برنامه خطای غیرمنتظره‌ای رخ بدهد (مثلاً در پردازش فایل)،
+// این بخش تضمین می‌کند که همیشه یک پاسخ JSON تمیز برگردد، نه یک پاسخ خالی یا خراب.
+app.use((err, req, res, next) => {
+  console.error('خطای سراسری:', err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'خطای غیرمنتظره در سرور: ' + (err.message || 'نامشخص') });
 });
 
 app.listen(PORT, () => {
